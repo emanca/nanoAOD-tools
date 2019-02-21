@@ -27,9 +27,8 @@ class lepSFProducer(Module):
         for i in range(len(el_f)): self.el_f[i] = el_f[i]; self.el_h[i] = el_h[i];
 
         if "/LeptonEfficiencyCorrector_cc.so" not in ROOT.gSystem.GetLibraries():
-            print "Loading C++ helper from %s/src/PhysicsTools/NanoAODTools/python/postprocessing/data/LeptonEfficiencyCorrector.cc" % os.environ['CMSSW_BASE']
-            ROOT.gROOT.ProcessLine(".L %s/src/PhysicsTools/NanoAODTools/python/postprocessing/data/LeptonEfficiencyCorrector.cc" % os.environ['CMSSW_BASE'])
-
+            print "Load C++ Worker"
+            ROOT.gROOT.ProcessLine(".L %s/src/PhysicsTools/NanoAODTools/python/postprocessing/helpers/LeptonEfficiencyCorrector.cc+" % os.environ['CMSSW_BASE'])
     def beginJob(self):
         self._worker_mu = ROOT.LeptonEfficiencyCorrector(self.mu_f,self.mu_h)
         self._worker_el = ROOT.LeptonEfficiencyCorrector(self.el_f,self.el_h)
