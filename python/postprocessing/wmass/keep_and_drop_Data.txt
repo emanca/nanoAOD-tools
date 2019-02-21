@@ -1,0 +1,9 @@
+drop * 
+keep event*
+keep run*
+keep luminosityBlock*
+keep Muon*
+keep event*
+keep MET*
+keep TkMET*
+keep PV*

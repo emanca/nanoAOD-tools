@@ -10,11 +10,12 @@ from PhysicsTools.NanoAODTools.postprocessing.modules.jme.jetSmearer import jetS
 from PhysicsTools.NanoAODTools.postprocessing.modules.jme.JetReCalibrator import JetReCalibrator
 
 class jetmetUncertaintiesProducer(Module):
-    def __init__(self, era, globalTag, jesUncertainties = [ "Total" ], jetType = "AK4PFchs", redoJEC=False, noGroom=False):
+    def __init__(self, era, globalTag, jesUncertainties = [ "Total" ], jetType = "AK4PFchs", redoJEC=False, noGroom=False, saveJets=True):
 
         self.era = era
 	self.redoJEC = redoJEC
         self.noGroom = noGroom
+        self.saveJets=saveJets
         #--------------------------------------------------------------------------------------------
         # CV: globalTag and jetType not yet used, as there is no consistent set of txt files for
         #     JES uncertainties and JER scale factors and uncertainties yet
@@ -57,16 +58,20 @@ class jetmetUncertaintiesProducer(Module):
         self.jesInputFilePath = os.environ['CMSSW_BASE'] + "/src/PhysicsTools/NanoAODTools/data/jme/"
         if len(jesUncertainties) == 1 and jesUncertainties[0] == "Total":
             if self.era == "2016":
-                self.jesUncertaintyInputFileName = "Summer16_23Sep2016V4_MC_Uncertainty_" + jetType + ".txt"
+                self.jesUncertaintyInputFileName = globalTag + "_Uncertainty_" + jetType + ".txt"
+                #self.jesUncertaintyInputFileName = "Summer16_23Sep2016V4_MC_Uncertainty_" + jetType + ".txt"
             elif self.era == "2017":
-                self.jesUncertaintyInputFileName = "Fall17_17Nov2017_V6_MC_Uncertainty_" + jetType + ".txt"
+                self.jesUncertaintyInputFileName = globalTag + "_Uncertainty_" + jetType + ".txt"
+                #self.jesUncertaintyInputFileName = "Fall17_17Nov2017_V6_MC_Uncertainty_" + jetType + ".txt"
             else:
                 raise ValueError("ERROR: Invalid era = '%s'!" % self.era)
         else:
             if self.era == "2016":
-                self.jesUncertaintyInputFileName = "Summer16_23Sep2016V4_MC_UncertaintySources_" + jetType + ".txt"
+                self.jesUncertaintyInputFileName =  globalTag + "_UncertaintySources_" + jetType + ".txt"
+                #self.jesUncertaintyInputFileName = "Summer16_23Sep2016V4_MC_UncertaintySources_" + jetType + ".txt"
             elif self.era == "2017":
-                self.jesUncertaintyInputFileName = "Fall17_17Nov2017_V6_MC_UncertaintySources_" + jetType + ".txt"
+                self.jesUncertaintyInputFileName = globalTag + "_UncertaintySources_" + jetType + ".txt"
+                #self.jesUncertaintyInputFileName = "Fall17_17Nov2017_V6_MC_UncertaintySources_" + jetType + ".txt"
             else:
                 raise ValueError("ERROR: Invalid era = '%s'!" % self.era)
 
@@ -103,7 +108,7 @@ class jetmetUncertaintiesProducer(Module):
         # implementation didn't seem to work for factorized JEC, try again another way
         for jesUncertainty in self.jesUncertainties:
             jesUncertainty_label = jesUncertainty
-            if self.era == "2016" and jesUncertainty == 'Total' and len(self.jesUncertainties) == 1:
+            if self.era in ["2016", "2017"] and jesUncertainty == 'Total' and len(self.jesUncertainties) == 1:
                 jesUncertainty_label = ''
             pars = ROOT.JetCorrectorParameters(os.path.join(self.jesInputFilePath, self.jesUncertaintyInputFileName),jesUncertainty_label)
             self.jesUncertainty[jesUncertainty] = ROOT.JetCorrectionUncertainty(pars)    
@@ -116,36 +121,42 @@ class jetmetUncertaintiesProducer(Module):
 
     def beginFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
         self.out = wrappedOutputTree
-        self.out.branch("%s_pt_nom" % self.jetBranchName, "F", lenVar=self.lenVar)
-        self.out.branch("%s_corr_JEC" % self.jetBranchName, "F", lenVar=self.lenVar)
-        self.out.branch("%s_corr_JER" % self.jetBranchName, "F", lenVar=self.lenVar)
-        self.out.branch("%s_mass_nom" % self.jetBranchName, "F", lenVar=self.lenVar)
+        if self.saveJets:
+            self.out.branch("%s_pt_nom" % self.jetBranchName, "F", lenVar=self.lenVar)
+            self.out.branch("%s_corr_JEC" % self.jetBranchName, "F", lenVar=self.lenVar)
+            self.out.branch("%s_corr_JER" % self.jetBranchName, "F", lenVar=self.lenVar)
+            self.out.branch("%s_mass_nom" % self.jetBranchName, "F", lenVar=self.lenVar)
         if self.doGroomed:
-            self.out.branch("%s_msoftdrop_nom" % self.jetBranchName, "F", lenVar=self.lenVar)
+            if self.saveJets:
+                self.out.branch("%s_msoftdrop_nom" % self.jetBranchName, "F", lenVar=self.lenVar)
             
         if self.corrMET:
             self.out.branch("%s_pt_nom" % self.metBranchName, "F")
             self.out.branch("%s_phi_nom" % self.metBranchName, "F")
         
         for shift in [ "Up", "Down" ]:
-            self.out.branch("%s_pt_jer%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
-            self.out.branch("%s_mass_jer%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
-            self.out.branch("%s_mass_jmr%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
-            self.out.branch("%s_mass_jms%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
+            if self.saveJets:
+                self.out.branch("%s_pt_jer%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
+                self.out.branch("%s_mass_jer%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
+                self.out.branch("%s_mass_jmr%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
+                self.out.branch("%s_mass_jms%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
 
             if self.doGroomed: 
-                self.out.branch("%s_msoftdrop_jer%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
-                self.out.branch("%s_msoftdrop_jmr%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
-                self.out.branch("%s_msoftdrop_jms%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
+                if self.saveJets:
+                    self.out.branch("%s_msoftdrop_jer%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
+                    self.out.branch("%s_msoftdrop_jmr%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
+                    self.out.branch("%s_msoftdrop_jms%s" % (self.jetBranchName, shift), "F", lenVar=self.lenVar)
 
             if self.corrMET :
                 self.out.branch("%s_pt_jer%s" % (self.metBranchName, shift), "F")
                 self.out.branch("%s_phi_jer%s" % (self.metBranchName, shift), "F")
             for jesUncertainty in self.jesUncertainties:
-                self.out.branch("%s_pt_jes%s%s" % (self.jetBranchName, jesUncertainty, shift), "F", lenVar=self.lenVar)
-                self.out.branch("%s_mass_jes%s%s" % (self.jetBranchName, jesUncertainty, shift), "F", lenVar=self.lenVar)
+                if self.saveJets:
+                    self.out.branch("%s_pt_jes%s%s" % (self.jetBranchName, jesUncertainty, shift), "F", lenVar=self.lenVar)
+                    self.out.branch("%s_mass_jes%s%s" % (self.jetBranchName, jesUncertainty, shift), "F", lenVar=self.lenVar)
                 if self.doGroomed:
-                    self.out.branch("%s_msoftdrop_jes%s%s" % (self.jetBranchName, jesUncertainty, shift), "F", lenVar=self.lenVar)
+                    if self.saveJets:
+                        self.out.branch("%s_msoftdrop_jes%s%s" % (self.jetBranchName, jesUncertainty, shift), "F", lenVar=self.lenVar)
                 if self.corrMET :
                     self.out.branch("%s_pt_jes%s%s" % (self.metBranchName, jesUncertainty, shift), "F")
                     self.out.branch("%s_phi_jes%s%s" % (self.metBranchName, jesUncertainty, shift), "F")
@@ -367,29 +378,29 @@ class jetmetUncertaintiesProducer(Module):
 
 
 
-            
-        self.out.fillBranch("%s_pt_nom" % self.jetBranchName, jets_pt_nom)
-        self.out.fillBranch("%s_corr_JEC" % self.jetBranchName, jets_corr_JEC)
-        self.out.fillBranch("%s_corr_JER" % self.jetBranchName, jets_corr_JER)
-        self.out.fillBranch("%s_pt_jerUp" % self.jetBranchName, jets_pt_jerUp)
-        self.out.fillBranch("%s_pt_jerDown" % self.jetBranchName, jets_pt_jerDown)
-        self.out.fillBranch("%s_mass_nom" % self.jetBranchName, jets_mass_nom)
-        self.out.fillBranch("%s_mass_jerUp" % self.jetBranchName, jets_mass_jerUp)
-        self.out.fillBranch("%s_mass_jerDown" % self.jetBranchName, jets_mass_jerDown)
-        self.out.fillBranch("%s_mass_jmrUp" % self.jetBranchName, jets_mass_jmrUp)
-        self.out.fillBranch("%s_mass_jmrDown" % self.jetBranchName, jets_mass_jmrDown)
-        self.out.fillBranch("%s_mass_jmsUp" % self.jetBranchName, jets_mass_jmsUp)
-        self.out.fillBranch("%s_mass_jmsDown" % self.jetBranchName, jets_mass_jmsDown)
+        if self.saveJets:            
+            self.out.fillBranch("%s_pt_nom" % self.jetBranchName, jets_pt_nom)
+            self.out.fillBranch("%s_corr_JEC" % self.jetBranchName, jets_corr_JEC)
+            self.out.fillBranch("%s_corr_JER" % self.jetBranchName, jets_corr_JER)
+            self.out.fillBranch("%s_pt_jerUp" % self.jetBranchName, jets_pt_jerUp)
+            self.out.fillBranch("%s_pt_jerDown" % self.jetBranchName, jets_pt_jerDown)
+            self.out.fillBranch("%s_mass_nom" % self.jetBranchName, jets_mass_nom)
+            self.out.fillBranch("%s_mass_jerUp" % self.jetBranchName, jets_mass_jerUp)
+            self.out.fillBranch("%s_mass_jerDown" % self.jetBranchName, jets_mass_jerDown)
+            self.out.fillBranch("%s_mass_jmrUp" % self.jetBranchName, jets_mass_jmrUp)
+            self.out.fillBranch("%s_mass_jmrDown" % self.jetBranchName, jets_mass_jmrDown)
+            self.out.fillBranch("%s_mass_jmsUp" % self.jetBranchName, jets_mass_jmsUp)
+            self.out.fillBranch("%s_mass_jmsDown" % self.jetBranchName, jets_mass_jmsDown)
             
         if self.doGroomed :
-
-            self.out.fillBranch("%s_msoftdrop_nom" % self.jetBranchName, jets_msdcorr_nom)
-            self.out.fillBranch("%s_msoftdrop_jerUp" % self.jetBranchName, jets_msdcorr_jerUp)
-            self.out.fillBranch("%s_msoftdrop_jerDown" % self.jetBranchName, jets_msdcorr_jerDown)
-            self.out.fillBranch("%s_msoftdrop_jmrUp" % self.jetBranchName, jets_msdcorr_jmrUp)
-            self.out.fillBranch("%s_msoftdrop_jmrDown" % self.jetBranchName, jets_msdcorr_jmrDown)
-            self.out.fillBranch("%s_msoftdrop_jmsUp" % self.jetBranchName, jets_msdcorr_jmsUp)
-            self.out.fillBranch("%s_msoftdrop_jmsDown" % self.jetBranchName, jets_msdcorr_jmsDown)
+            if self.saveJets:
+                self.out.fillBranch("%s_msoftdrop_nom" % self.jetBranchName, jets_msdcorr_nom)
+                self.out.fillBranch("%s_msoftdrop_jerUp" % self.jetBranchName, jets_msdcorr_jerUp)
+                self.out.fillBranch("%s_msoftdrop_jerDown" % self.jetBranchName, jets_msdcorr_jerDown)
+                self.out.fillBranch("%s_msoftdrop_jmrUp" % self.jetBranchName, jets_msdcorr_jmrUp)
+                self.out.fillBranch("%s_msoftdrop_jmrDown" % self.jetBranchName, jets_msdcorr_jmrDown)
+                self.out.fillBranch("%s_msoftdrop_jmsUp" % self.jetBranchName, jets_msdcorr_jmsUp)
+                self.out.fillBranch("%s_msoftdrop_jmsDown" % self.jetBranchName, jets_msdcorr_jmsDown)
 
             
         if self.corrMET :
@@ -401,14 +412,16 @@ class jetmetUncertaintiesProducer(Module):
             self.out.fillBranch("%s_phi_jerDown" % self.metBranchName, math.atan2(met_py_jerDown, met_px_jerDown))
             
         for jesUncertainty in self.jesUncertainties:
-            self.out.fillBranch("%s_pt_jes%sUp" % (self.jetBranchName, jesUncertainty), jets_pt_jesUp[jesUncertainty])
-            self.out.fillBranch("%s_pt_jes%sDown" % (self.jetBranchName, jesUncertainty), jets_pt_jesDown[jesUncertainty])
-            self.out.fillBranch("%s_mass_jes%sUp" % (self.jetBranchName, jesUncertainty), jets_mass_jesUp[jesUncertainty])
-            self.out.fillBranch("%s_mass_jes%sDown" % (self.jetBranchName, jesUncertainty), jets_mass_jesDown[jesUncertainty])
+            if self.saveJets:
+                self.out.fillBranch("%s_pt_jes%sUp" % (self.jetBranchName, jesUncertainty), jets_pt_jesUp[jesUncertainty])
+                self.out.fillBranch("%s_pt_jes%sDown" % (self.jetBranchName, jesUncertainty), jets_pt_jesDown[jesUncertainty])
+                self.out.fillBranch("%s_mass_jes%sUp" % (self.jetBranchName, jesUncertainty), jets_mass_jesUp[jesUncertainty])
+                self.out.fillBranch("%s_mass_jes%sDown" % (self.jetBranchName, jesUncertainty), jets_mass_jesDown[jesUncertainty])
             
             if self.doGroomed : 
-                self.out.fillBranch("%s_msoftdrop_jes%sUp" % (self.jetBranchName, jesUncertainty), jets_msdcorr_jesUp[jesUncertainty])
-                self.out.fillBranch("%s_msoftdrop_jes%sDown" % (self.jetBranchName, jesUncertainty), jets_msdcorr_jesDown[jesUncertainty])
+                if self.saveJets:
+                    self.out.fillBranch("%s_msoftdrop_jes%sUp" % (self.jetBranchName, jesUncertainty), jets_msdcorr_jesUp[jesUncertainty])
+                    self.out.fillBranch("%s_msoftdrop_jes%sDown" % (self.jetBranchName, jesUncertainty), jets_msdcorr_jesDown[jesUncertainty])
                 
             
             if self.corrMET:
