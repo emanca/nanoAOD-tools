@@ -51,18 +51,22 @@ class additionalVariables(Module):
                         self.out.branch("%s_Wlikehphi" % branch_label_mu, "F",  lenVar="nMuons", title="W-like H phi, "+title_label)
                         self.out.branch("%s_WlikeuPar" % branch_label_mu, "F",  lenVar="nMuons", title="W-like MET || mu, "+title_label)
                         self.out.branch("%s_WlikeuPer" % branch_label_mu, "F",  lenVar="nMuons", title="W-like MET T mu, "+title_label)
+                        self.out.branch("%s_metPt" % branch_label_mu, "F", lenVar="nMuons", title="MET Pt, "+title_label)
                         self.out.branch("%s_uPar" % branch_label_mu, "F", lenVar="nMuons", title="MET || mu, "+title_label)
                         self.out.branch("%s_uPer" % branch_label_mu, "F", lenVar="nMuons", title="MET T mu, "+title_label)
-                        self.out.branch("%s_hptPar" % branch_label_mu, "F", lenVar="nMuons", title="H pt || mu, "+title_label)
-                        self.out.branch("%s_hptPer" % branch_label_mu, "F", lenVar="nMuons", title="H pt T mu, "+title_label)
-                        self.out.branch("%s_WlikehptPar" % branch_label_mu, "F", lenVar="nMuons", title="W-like H pt || mu, "+title_label)
-                        self.out.branch("%s_WlikehptPer" % branch_label_mu, "F", lenVar="nMuons", title="W-like H pt T mu, "+title_label)
+                        self.out.branch("%s_hPar" % branch_label_mu, "F", lenVar="nMuons", title="H pt || mu, "+title_label)
+                        self.out.branch("%s_hPer" % branch_label_mu, "F", lenVar="nMuons", title="H pt T mu, "+title_label)
+                        self.out.branch("%s_WlikehPar" % branch_label_mu, "F", lenVar="nMuons", title="W-like H pt || mu, "+title_label)
+                        self.out.branch("%s_WlikehPer" % branch_label_mu, "F", lenVar="nMuons", title="W-like H pt T mu, "+title_label)
                         branch_label_Z  = ("GenFromRecoZ" if key_mu=="GEN" else "RecoZ")
                         branch_label_Z += format_name(mu["tag"], var_mu, met["tag"], var_met, True)
                         self.out.branch("%s_uPar" % branch_label_Z, "F", title=branch_label_Z+" MET || Z, "+title_label)
                         self.out.branch("%s_uPer" % branch_label_Z, "F", title=branch_label_Z+" MET T Z, "+title_label)
-                        self.out.branch("%s_hptPar" % branch_label_Z, "F", title=branch_label_Z+" H pt || Z, "+title_label)
-                        self.out.branch("%s_hptPer" % branch_label_Z, "F", title=branch_label_Z+" H pt T Z, "+title_label)
+                        self.out.branch("%s_hPar" % branch_label_Z, "F", title=branch_label_Z+" H pt || Z, "+title_label)
+                        self.out.branch("%s_hPer" % branch_label_Z, "F", title=branch_label_Z+" H pt T Z, "+title_label)
+
+        self.out.branch("Muon_pfIso04", "F", lenVar="nMuons", title="muon absolute isolation")
+
         pass
 
     def endFile(self, inputFile, outputFile, inputTree, wrappedOutputTree):
@@ -83,6 +87,7 @@ class additionalVariables(Module):
         met_per_vec    = [0.0]*len(muons)
         Recoil_par_vec    = [0.0]*len(muons)
         Recoil_per_vec    = [0.0]*len(muons)
+        met_pt_vec = [0.0]*len(muons)
         Mt_Wlike_vec         = [0.0]*len(muons)
         Recoil_pt_Wlike_vec  = [0.0]*len(muons)
         Recoil_phi_Wlike_vec = [0.0]*len(muons)
@@ -90,6 +95,7 @@ class additionalVariables(Module):
         Recoil_per_Wlike_vec    = [0.0]*len(muons)
         met_par_Wlike_vec    = [0.0]*len(muons)
         met_per_Wlike_vec    = [0.0]*len(muons)
+        pfIso04_vec    = [0.0]*len(muons)
 
         for key_mu,mu in self.mudict.items() :
             for ivar_mu,var_mu in enumerate(mu["systs"]):
@@ -130,6 +136,7 @@ class additionalVariables(Module):
                                 else:
                                     mu_pt, muon_phi, muon_mass = 0.,0.,0.
                             (mt,hpt,hphi,met_par,met_per,h_par,h_per) = evaluateMt( mu_pt, muon_phi, muon_mass, met_pt, met_phi)
+                            # mu_pfIso04 = getattr(muon, format_name("",var_mu, "", "pfRelIso04_all", False))*mu_pt
 
                             # W-like (filled only when there are 2 muons)
                             if event.Vtype in [2,3] and imuon in [event.Idx_mu1, event.Idx_mu2]:
@@ -163,6 +170,7 @@ class additionalVariables(Module):
                             Recoil_phi_vec[imuon] = hphi
                             met_par_vec[imuon] = met_par
                             met_per_vec[imuon] = met_per
+                            met_pt_vec[imuon] = met_pt
                             Recoil_par_vec[imuon] = h_par
                             Recoil_per_vec[imuon] = h_per
 
@@ -172,16 +180,18 @@ class additionalVariables(Module):
                         self.out.fillBranch("%s_hphi" % branch_label_mu, Recoil_phi_vec)
                         self.out.fillBranch("%s_uPar" % branch_label_mu, met_par_vec)
                         self.out.fillBranch("%s_uPer" % branch_label_mu, met_per_vec)
-                        self.out.fillBranch("%s_hptPar" % branch_label_mu, Recoil_par_vec)
-                        self.out.fillBranch("%s_hptPer" % branch_label_mu, Recoil_per_vec)
+                        self.out.fillBranch("%s_metPt" % branch_label_mu, met_pt_vec)
+                        self.out.fillBranch("%s_hPar" % branch_label_mu, Recoil_par_vec)
+                        self.out.fillBranch("%s_hPer" % branch_label_mu, Recoil_per_vec)
                         # W-like variables
                         self.out.fillBranch("%s_Wlikemt" % branch_label_mu, Mt_Wlike_vec)
                         self.out.fillBranch("%s_Wlikehpt" % branch_label_mu, Recoil_pt_Wlike_vec)
                         self.out.fillBranch("%s_Wlikehphi" % branch_label_mu, Recoil_phi_Wlike_vec)
                         self.out.fillBranch("%s_WlikeuPar" % branch_label_mu, met_par_Wlike_vec)
                         self.out.fillBranch("%s_WlikeuPer" % branch_label_mu, met_per_Wlike_vec)
-                        self.out.fillBranch("%s_WlikehptPar" % branch_label_mu, Recoil_par_Wlike_vec)
-                        self.out.fillBranch("%s_WlikehptPer" % branch_label_mu, Recoil_per_Wlike_vec)
+                        self.out.fillBranch("%s_WlikehPar" % branch_label_mu, Recoil_par_Wlike_vec)
+                        self.out.fillBranch("%s_WlikehPer" % branch_label_mu, Recoil_per_Wlike_vec)
+
                         # MET projections along reco/gen Z
                         branch_label_Z  = ("GenFromRecoZ" if key_mu=="GEN" else "RecoZ")
                         branch_label_Z += format_name(mu["tag"], var_mu, met["tag"], var_met, True)
@@ -196,8 +206,15 @@ class additionalVariables(Module):
                             (Zmt, Zh_pt, Zh_phi, Zmet_par, Zmet_per,Zh_par,Zh_per) = (0., 0., 0., 0., 0., 0., 0.)
                         self.out.fillBranch("%s_uPar" % branch_label_Z, Zmet_par)
                         self.out.fillBranch("%s_uPer" % branch_label_Z, Zmet_per)
-                        self.out.fillBranch("%s_hptPar" % branch_label_Z, Zh_par)
-                        self.out.fillBranch("%s_hptPer" % branch_label_Z, Zh_per)
+                        self.out.fillBranch("%s_hPar" % branch_label_Z, Zh_par)
+                        self.out.fillBranch("%s_hPer" % branch_label_Z, Zh_per)
+
+        for imuon,muon in enumerate(muons) : #definition of absolute isolation
+            mu_pt = getattr(muon, "pt")
+            mu_pfIso04 = getattr(muon, "pfRelIso04_all")*mu_pt
+            pfIso04_vec[imuon] = mu_pfIso04
+        self.out.fillBranch("Muon_pfIso04", pfIso04_vec)
+
 
         return True
 
